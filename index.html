@@ -92,8 +92,8 @@ h1 { font-family: var(--serif); font-weight: 500; font-size: 1.6rem; margin: 0; 
 @media (min-width: 640px) { .panel { padding: 30px 34px 26px; } }
 .panel h2 { font-family: var(--serif); font-weight: 500; font-size: 1.9rem; margin: 0 0 14px; letter-spacing: -0.01em; }
 
-.modes { display: inline-flex; flex-wrap: wrap; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; margin-bottom: 14px; }
-.mode { background: none; border: 0; border-radius: 7px; padding: 8px 14px; font-size: 0.95rem; color: var(--ink-soft); font-weight: 500; }
+.modes { display: flex; flex-wrap: wrap; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; margin-bottom: 14px; }
+.mode { flex: 1 1 auto; background: none; border: 0; border-radius: 7px; padding: 8px 10px; font-size: 0.95rem; color: var(--ink-soft); font-weight: 500; }
 .mode[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
 
 .verse-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
@@ -557,7 +557,7 @@ textarea {
       (idxP < PASSAGES.length - 1 ? '<button class="btn" type="button" data-nav="1">Next: ' + PASSAGES[idxP + 1].ref + '</button>' : '') + '</div>';
     elPanel.innerHTML = html;
     if (state.mode === "speak") setSpeakMsg(state.speakMsg, state.speakErr);
-    if (state.mode === "type" && state.result) renderResult();
+    if ((state.mode === "type" || state.mode === "speak") && state.result) renderResult();
     renderPassages();
   }
 
@@ -583,6 +583,18 @@ textarea {
     var n = refWords.length, m = typedWords.length;
     var rn = refWords.map(function (w) { return norm(w.replace(/-/g, "")); });
     var tn = typedWords.map(function (w) { return norm(w.replace(/-/g, "")); });
+    var refSet = {}; rn.forEach(function (w) { refSet[w] = 1; });
+    var mergedT = [];
+    for (var q = 0; q < typedWords.length; q++) {
+      var cur = typedWords[q], nxt = typedWords[q + 1];
+      if (nxt !== undefined) {
+        var cat = norm((cur + nxt).replace(/-/g, ""));
+        if (refSet[cat] && !(refSet[norm(cur)] && refSet[norm(nxt)])) { mergedT.push(cur + nxt); q++; continue; }
+      }
+      mergedT.push(cur);
+    }
+    typedWords = mergedT; m = typedWords.length;
+    tn = typedWords.map(function (w) { return norm(w.replace(/-/g, "")); });
     var dp = [];
     for (var i = 0; i <= n; i++) { dp.push(new Array(m + 1).fill(0)); }
     for (i = n - 1; i >= 0; i--) for (var j = m - 1; j >= 0; j--) {
@@ -655,7 +667,12 @@ textarea {
     if (t.id === "checkBtn") { state.typed = document.getElementById("typed").value; checkTyped(); return; }
     var mic = t.closest("#micBtn");
     if (mic) { if (state.listening) stopListening(); else startListening(); return; }
-    if (t.id === "checkSpeak") { stopListening(); var sp = document.getElementById("spoken"); if (sp) state.spoken = sp.value; checkText(state.spoken, true); return; }
+    if (t.id === "checkSpeak") {
+      var wasOn = state.listening; stopListening();
+      var runCheck = function () { var sp = document.getElementById("spoken"); if (sp) state.spoken = sp.value; checkText(state.spoken, true); };
+      if (wasOn) setTimeout(runCheck, 700); else runCheck();
+      return;
+    }
     if (t.id === "clearSpeak") { stopListening(); state.spoken = ""; state.result = null; render(); return; }
     if (t.id === "clearBtn") { state.typed = ""; state.result = null; render(); return; }
     var opt = t.closest("[data-level]");
@@ -686,7 +703,23 @@ textarea {
   }
 
   /* ---------- speech recognition ---------- */
-  var rec = null, wantListening = false, baseText = "", startedAt = 0, gotAny = false, quickEnds = 0;
+  var rec = null, wantListening = false, baseText = "", sessionText = "", startedAt = 0, gotAny = false, quickEnds = 0;
+  // Android Chrome sends growing, repeated results ("1", "1 2", "1 2 3"), so rebuild the transcript from the
+  // whole results list each time and collapse results that merely extend the previous one.
+  function buildFromResults(results) {
+    var segs = [];
+    for (var i = 0; i < results.length; i++) {
+      var t = (results[i][0].transcript || "").trim();
+      if (!t) continue;
+      if (segs.length) {
+        var last = segs[segs.length - 1], lt = last.toLowerCase(), tt = t.toLowerCase();
+        if (tt.indexOf(lt) === 0) { segs[segs.length - 1] = t; continue; }
+        if (lt.indexOf(tt) === 0) continue;
+      }
+      segs.push(t);
+    }
+    return segs.join(" ");
+  }
   var DICTATE_TIP = " Tap the box below and use the microphone key on your keyboard to dictate instead, then press Check.";
   function failListening(msg) {
     wantListening = false; state.listening = false; syncMic();
@@ -709,23 +742,22 @@ textarea {
     var t = document.getElementById("spoken");
     baseText = t ? t.value.trim() : state.spoken.trim();
     if (baseText) baseText += " ";
+    sessionText = "";
     state.result = null; var rb = document.getElementById("result"); if (rb) rb.innerHTML = "";
     startedAt = Date.now(); gotAny = false; quickEnds = 0;
     try {
-      rec = new SR();
+      var my = rec = new SR();
       rec.lang = "en-US"; rec.continuous = true; rec.interimResults = true;
       rec.onresult = function (e) {
-        var interim = "";
+        if (my !== rec) return;
         gotAny = true; quickEnds = 0;
-        for (var i = e.resultIndex; i < e.results.length; i++) {
-          var tr = e.results[i][0].transcript;
-          if (e.results[i].isFinal) baseText += tr.trim() + " "; else interim += tr;
-        }
-        state.spoken = baseText.trim();
+        sessionText = buildFromResults(e.results);
+        state.spoken = (baseText + sessionText).trim();
         var box = document.getElementById("spoken");
-        if (box) { box.value = baseText + interim; box.scrollTop = box.scrollHeight; }
+        if (box) { box.value = state.spoken; box.scrollTop = box.scrollHeight; }
       };
       rec.onerror = function (e) {
+        if (my !== rec) return;
         if (e.error === "no-speech" || e.error === "aborted") return;
         var msg = e.error === "not-allowed" || e.error === "service-not-allowed"
           ? "This page isn’t being allowed to use the microphone (error: " + e.error + "). The page may be blocked from it even if Chrome has permission."
@@ -735,10 +767,12 @@ textarea {
         failListening(msg);
       };
       rec.onend = function () {
+        if (my !== rec) return;
         if (wantListening) {
           if (!gotAny && Date.now() - startedAt < 2000) quickEnds++;
           if (quickEnds >= 2) { failListening("Listening kept stopping before hearing anything."); return; }
           startedAt = Date.now();
+          var joined = (baseText + sessionText).trim(); baseText = joined ? joined + " " : ""; sessionText = "";
           try { rec.start(); return; } catch (er) {}
         }
         state.listening = false; wantListening = false; syncMic();
