@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hid in my heart — KJV memory verses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #EDF1F5;
+  --surface: #F8FAFC;
+  --ink: #16233B;
+  --ink-soft: #55627A;
+  --line: #CBD5E1;
+  --accent: #B4761A;
+  --accent-ink: #FFFFFF;
+  --good: #3F7A5C;
+  --good-bg: #DDEEE5;
+  --warn-bg: #F6E7C8;
+  --bad: #A8432F;
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1829; --surface: #172238; --ink: #E7ECF4; --ink-soft: #9AA7BE;
+    --line: #2B3957; --accent: #E2AE4A; --accent-ink: #1A1305;
+    --good: #7CC3A0; --good-bg: #1B3A2E; --warn-bg: #43361A; --bad: #E58A76;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1829; --surface: #172238; --ink: #E7ECF4; --ink-soft: #9AA7BE;
+  --line: #2B3957; --accent: #E2AE4A; --accent-ink: #1A1305;
+  --good: #7CC3A0; --good-bg: #1B3A2E; --warn-bg: #43361A; --bad: #E58A76;
+}
+html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100%;
+  background: var(--bg); color: var(--ink);
+  font-family: var(--sans); font-size: 16px; line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+.app { max-width: 1060px; margin: 0 auto; padding: 20px 16px 56px; }
+header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+h1 { font-family: var(--serif); font-weight: 500; font-size: 1.6rem; margin: 0; letter-spacing: -0.01em; }
+.sub { color: var(--ink-soft); font-size: 0.9rem; margin: 2px 0 0; }
+.theme-btn { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 0.85rem; color: var(--ink-soft); }
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.layout { display: grid; gap: 20px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .layout { grid-template-columns: 260px 1fr; align-items: start; } }
+
+/* passage picker */
+.side { min-width: 0; }
+.picker { display: grid; gap: 8px; }
+.picker select { width: 100%; font: inherit; font-size: 1rem; padding: 12px 12px; border: 1px solid var(--ink); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.picker .stats { font-size: 0.85rem; color: var(--ink-soft); }
+.passages { display: none; }
+@media (min-width: 900px) {
+  .picker { display: none; }
+  .side { position: sticky; top: 16px; }
+  .passages { display: block; max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 6px; }
+}
+.grp { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 0 6px; font-family: var(--serif); font-size: 1.02rem; font-weight: 500; color: var(--ink); }
+.grp:first-child { margin-top: 0; }
+.grp span { font-family: var(--sans); font-size: 0.78rem; color: var(--ink-soft); font-weight: 400; }
+.p-btn {
+  width: 100%; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; margin-bottom: 2px;
+  display: grid; gap: 3px;
+}
+.p-btn:hover { border-color: var(--line); }
+.p-btn[aria-current="true"] { background: var(--surface); border-color: var(--ink); box-shadow: inset 4px 0 0 var(--accent); }
+.p-ref { font-size: 0.97rem; font-weight: 500; }
+.p-meta { font-size: 0.78rem; color: var(--ink-soft); display: flex; align-items: center; gap: 8px; }
+.pips { display: inline-flex; gap: 3px; }
+.pip { width: 12px; height: 4px; border-radius: 2px; background: var(--line); }
+.pip.on { background: var(--good); }
+.due { color: var(--accent); font-weight: 600; }
+.pager { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-top: 22px; }
+
+/* main panel */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px 18px 20px; }
+@media (min-width: 640px) { .panel { padding: 30px 34px 26px; } }
+.panel h2 { font-family: var(--serif); font-weight: 500; font-size: 1.9rem; margin: 0 0 14px; letter-spacing: -0.01em; }
+
+.modes { display: inline-flex; flex-wrap: wrap; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; margin-bottom: 14px; }
+.mode { background: none; border: 0; border-radius: 7px; padding: 8px 14px; font-size: 0.95rem; color: var(--ink-soft); font-weight: 500; }
+.mode[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line); }
+
+.verse-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+.chip { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 4px 12px; font-size: 0.88rem; color: var(--ink-soft); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+
+.hint { color: var(--ink-soft); font-size: 0.92rem; margin: 0 0 16px; max-width: 60ch; }
+
+/* scripture text */
+.scripture { font-family: var(--serif); font-size: 1.3rem; line-height: 1.85; max-width: 62ch; margin: 0 0 22px; }
+@media (min-width: 640px) { .scripture { font-size: 1.45rem; } }
+.scripture sup { font-family: var(--sans); font-size: 0.62em; color: var(--accent); font-weight: 600; margin-right: 3px; vertical-align: 0.5em; }
+.vblock { display: block; margin-bottom: 6px; }
+.w { background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; display: inline; }
+.w.hide { color: transparent; border-bottom: 2px solid var(--ink-soft); user-select: none; }
+.w.hide:hover { border-bottom-color: var(--accent); }
+.w.show-again { color: var(--accent); }
+.w.initial { letter-spacing: 0.06em; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; margin-bottom: 22px; }
+.controls label { font-size: 0.92rem; color: var(--ink-soft); display: flex; align-items: center; gap: 10px; }
+input[type=range] { accent-color: var(--accent); width: 190px; }
+.btn { border: 1px solid var(--line); background: none; border-radius: 8px; padding: 8px 14px; font-size: 0.92rem; font-weight: 500; }
+.btn:hover { border-color: var(--ink-soft); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.06); }
+
+textarea {
+  width: 100%; min-height: 180px; resize: vertical; padding: 14px;
+  font-family: var(--serif); font-size: 1.2rem; line-height: 1.6;
+  background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px;
+}
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+.check-label { font-size: 0.92rem; color: var(--ink-soft); display: inline-flex; gap: 8px; align-items: center; }
+.hint-block { font-family: var(--serif); font-size: 1.1rem; line-height: 1.7; color: var(--ink-soft); background: var(--bg); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+
+.mic-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 14px; }
+.mic { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--ink); background: var(--ink); color: var(--surface); border-radius: 999px; padding: 12px 22px; font-size: 1rem; font-weight: 600; }
+.mic .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.mic[aria-pressed="true"] { background: var(--bad); border-color: var(--bad); color: #fff; }
+.mic[aria-pressed="true"] .dot { background: #fff; animation: pulse 1.1s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.5); opacity: .6; } }
+.speak-msg { font-size: 0.9rem; color: var(--ink-soft); }
+.speak-msg.err { color: var(--bad); }
+.note { font-size: 0.85rem; color: var(--ink-soft); margin: 4px 0 0; max-width: 62ch; }
+.result { border-top: 1px solid var(--line); padding-top: 18px; margin-top: 8px; }
+.score { font-family: var(--serif); font-size: 2.2rem; font-weight: 500; margin: 0; }
+.score small { font-family: var(--sans); font-size: 0.95rem; color: var(--ink-soft); font-weight: 400; margin-left: 8px; }
+.diff { font-family: var(--serif); font-size: 1.25rem; line-height: 1.9; max-width: 62ch; margin: 10px 0 8px; }
+.diff .ok { color: var(--ink); }
+.diff .miss { background: var(--warn-bg); border-radius: 3px; padding: 0 3px; }
+.diff .extra { color: var(--bad); text-decoration: line-through; }
+.legend { font-size: 0.85rem; color: var(--ink-soft); }
+
+.rate { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); }
+.rate p { margin: 0 0 10px; font-weight: 500; }
+.rate .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.rate .opt { border: 1px solid var(--line); background: none; border-radius: 8px; padding: 8px 14px; font-size: 0.92rem; }
+.rate .opt[aria-pressed="true"] { background: var(--good-bg); border-color: var(--good); color: var(--ink); }
+.saved { font-size: 0.85rem; color: var(--good); margin-left: 6px; }
+.foot { color: var(--ink-soft); font-size: 0.82rem; margin-top: 22px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>Hid in my heart</h1>
+      <p class="sub">King James Version memory verses<span id="summary"></span></p>
+    </div>
+    <button class="theme-btn" id="themeBtn" type="button">Theme</button>
+  </header>
+
+  <div class="layout">
+    <div class="side">
+      <div class="picker"><label class="sr" for="pSel">Passage</label><select id="pSel"></select><div class="stats" id="statsMobile"></div></div>
+      <nav class="passages" id="passages" aria-label="Passages"></nav>
+    </div>
+    <main class="panel" id="panel"></main>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  var PASSAGES = [
+    { group: "Your passages", id: "eph1-3", ref: "Ephesians 1:3–6", verses: [
+      [3, "Blessed be the God and Father of our Lord Jesus Christ, who hath blessed us with all spiritual blessings in heavenly places in Christ:"],
+      [4, "According as he hath chosen us in him before the foundation of the world, that we should be holy and without blame before him in love:"],
+      [5, "Having predestinated us unto the adoption of children by Jesus Christ to himself, according to the good pleasure of his will,"],
+      [6, "To the praise of the glory of his grace, wherein he hath made us accepted in the beloved."]
+    ]},
+    { group: "Your passages", id: "eph1-15", ref: "Ephesians 1:15–23", verses: [
+      [15, "Wherefore I also, after I heard of your faith in the Lord Jesus, and love unto all the saints,"],
+      [16, "Cease not to give thanks for you, making mention of you in my prayers;"],
+      [17, "That the God of our Lord Jesus Christ, the Father of glory, may give unto you the spirit of wisdom and revelation in the knowledge of him:"],
+      [18, "The eyes of your understanding being enlightened; that ye may know what is the hope of his calling, and what the riches of the glory of his inheritance in the saints,"],
+      [19, "And what is the exceeding greatness of his power to us-ward who believe, according to the working of his mighty power,"],
+      [20, "Which he wrought in Christ, when he raised him from the dead, and set him at his own right hand in the heavenly places,"],
+      [21, "Far above all principality, and power, and might, and dominion, and every name that is named, not only in this world, but also in that which is to come:"],
+      [22, "And hath put all things under his feet, and gave him to be the head over all things to the church,"],
+      [23, "Which is his body, the fulness of him that filleth all in all."]
+    ]},
+    { group: "Your passages", id: "eph3-14", ref: "Ephesians 3:14–21", verses: [
+      [14, "For this cause I bow my knees unto the Father of our Lord Jesus Christ,"],
+      [15, "Of whom the whole family in heaven and earth is named,"],
+      [16, "That he would grant you, according to the riches of his glory, to be strengthened with might by his Spirit in the inner man;"],
+      [17, "That Christ may dwell in your hearts by faith; that ye, being rooted and grounded in love,"],
+      [18, "May be able to comprehend with all saints what is the breadth, and length, and depth, and height;"],
+      [19, "And to know the love of Christ, which passeth knowledge, that ye might be filled with all the fulness of God."],
+      [20, "Now unto him that is able to do exceeding abundantly above all that we ask or think, according to the power that worketh in us,"],
+      [21, "Unto him be glory in the church by Christ Jesus throughout all ages, world without end. Amen."]
+    ]},
+    { group: "Your passages", id: "1jn3-13", ref: "1 John 3:13–16", verses: [
+      [13, "Marvel not, my brethren, if the world hate you."],
+      [14, "We know that we have passed from death unto life, because we love the brethren. He that loveth not his brother abideth in death."],
+      [15, "Whosoever hateth his brother is a murderer: and ye know that no murderer hath eternal life abiding in him."],
+      [16, "Hereby perceive we the love of God, because he laid down his life for us: and we ought to lay down our lives for the brethren."]
+    ]},
+    { group: "The gospel", id: "rom3-23", ref: "Romans 3:23", verses: [
+      [23, "For all have sinned, and come short of the glory of God;"]
+    ]},
+    { group: "The gospel", id: "rom6-23", ref: "Romans 6:23", verses: [
+      [23, "For the wages of sin is death; but the gift of God is eternal life through Jesus Christ our Lord."]
+    ]},
+    { group: "The gospel", id: "rom5-8", ref: "Romans 5:8", verses: [
+      [8, "But God commendeth his love toward us, in that, while we were yet sinners, Christ died for us."]
+    ]},
+    { group: "The gospel", id: "john3-16", ref: "John 3:16", verses: [
+      [16, "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life."]
+    ]},
+    { group: "The gospel", id: "eph2-8", ref: "Ephesians 2:8–10", verses: [
+      [8, "For by grace are ye saved through faith; and that not of yourselves: it is the gift of God:"],
+      [9, "Not of works, lest any man should boast."],
+      [10, "For we are his workmanship, created in Christ Jesus unto good works, which God hath before ordained that we should walk in them."]
+    ]},
+    { group: "The gospel", id: "rom10-9", ref: "Romans 10:9–10", verses: [
+      [9, "That if thou shalt confess with thy mouth the Lord Jesus, and shalt believe in thine heart that God hath raised him from the dead, thou shalt be saved."],
+      [10, "For with the heart man believeth unto righteousness; and with the mouth confession is made unto salvation."]
+    ]},
+    { group: "The gospel", id: "john1-12", ref: "John 1:12", verses: [
+      [12, "But as many as received him, to them gave he power to become the sons of God, even to them that believe on his name:"]
+    ]},
+    { group: "Assurance and forgiveness", id: "1jn5-11", ref: "1 John 5:11–13", verses: [
+      [11, "And this is the record, that God hath given to us eternal life, and this life is in his Son."],
+      [12, "He that hath the Son hath life; and he that hath not the Son of God hath not life."],
+      [13, "These things have I written unto you that believe on the name of the Son of God; that ye may know that ye have eternal life, and that ye may believe on the name of the Son of God."]
+    ]},
+    { group: "Assurance and forgiveness", id: "rom8-1", ref: "Romans 8:1", verses: [
+      [1, "There is therefore now no condemnation to them which are in Christ Jesus, who walk not after the flesh, but after the Spirit."]
+    ]},
+    { group: "Assurance and forgiveness", id: "1jn1-9", ref: "1 John 1:9", verses: [
+      [9, "If we confess our sins, he is faithful and just to forgive us our sins, and to cleanse us from all unrighteousness."]
+    ]},
+    { group: "Assurance and forgiveness", id: "rom8-38", ref: "Romans 8:38–39", verses: [
+      [38, "For I am persuaded, that neither death, nor life, nor angels, nor principalities, nor powers, nor things present, nor things to come,"],
+      [39, "Nor height, nor depth, nor any other creature, shall be able to separate us from the love of God, which is in Christ Jesus our Lord."]
+    ]},
+    { group: "New life in Christ", id: "2cor5-17", ref: "2 Corinthians 5:17", verses: [
+      [17, "Therefore if any man be in Christ, he is a new creature: old things are passed away; behold, all things are become new."]
+    ]},
+    { group: "New life in Christ", id: "gal2-20", ref: "Galatians 2:20", verses: [
+      [20, "I am crucified with Christ: nevertheless I live; yet not I, but Christ liveth in me: and the life which I now live in the flesh I live by the faith of the Son of God, who loved me, and gave himself for me."]
+    ]},
+    { group: "New life in Christ", id: "rom12-1", ref: "Romans 12:1–2", verses: [
+      [1, "I beseech you therefore, brethren, by the mercies of God, that ye present your bodies a living sacrifice, holy, acceptable unto God, which is your reasonable service."],
+      [2, "And be not conformed to this world: but be ye transformed by the renewing of your mind, that ye may prove what is that good, and acceptable, and perfect, will of God."]
+    ]},
+    { group: "New life in Christ", id: "gal5-22", ref: "Galatians 5:22–23", verses: [
+      [22, "But the fruit of the Spirit is love, joy, peace, longsuffering, gentleness, goodness, faith,"],
+      [23, "Meekness, temperance: against such there is no law."]
+    ]},
+    { group: "God’s Word and prayer", id: "ps119-11", ref: "Psalm 119:11", verses: [
+      [11, "Thy word have I hid in mine heart, that I might not sin against thee."]
+    ]},
+    { group: "God’s Word and prayer", id: "2tim3-16", ref: "2 Timothy 3:16–17", verses: [
+      [16, "All scripture is given by inspiration of God, and is profitable for doctrine, for reproof, for correction, for instruction in righteousness:"],
+      [17, "That the man of God may be perfect, throughly furnished unto all good works."]
+    ]},
+    { group: "God’s Word and prayer", id: "josh1-8", ref: "Joshua 1:8", verses: [
+      [8, "This book of the law shall not depart out of thy mouth; but thou shalt meditate therein day and night, that thou mayest observe to do according to all that is written therein: for then thou shalt make thy way prosperous, and then thou shalt have good success."]
+    ]},
+    { group: "God’s Word and prayer", id: "heb4-12", ref: "Hebrews 4:12", verses: [
+      [12, "For the word of God is quick, and powerful, and sharper than any twoedged sword, piercing even to the dividing asunder of soul and spirit, and of the joints and marrow, and is a discerner of the thoughts and intents of the heart."]
+    ]},
+    { group: "God’s Word and prayer", id: "john15-7", ref: "John 15:7", verses: [
+      [7, "If ye abide in me, and my words abide in you, ye shall ask what ye will, and it shall be done unto you."]
+    ]},
+    { group: "Trust and peace", id: "prov3-5", ref: "Proverbs 3:5–6", verses: [
+      [5, "Trust in the LORD with all thine heart; and lean not unto thine own understanding."],
+      [6, "In all thy ways acknowledge him, and he shall direct thy paths."]
+    ]},
+    { group: "Trust and peace", id: "matt6-33", ref: "Matthew 6:33", verses: [
+      [33, "But seek ye first the kingdom of God, and his righteousness; and all these things shall be added unto you."]
+    ]},
+    { group: "Trust and peace", id: "phil4-6", ref: "Philippians 4:6–7", verses: [
+      [6, "Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God."],
+      [7, "And the peace of God, which passeth all understanding, shall keep your hearts and minds through Christ Jesus."]
+    ]},
+    { group: "Trust and peace", id: "1pet5-7", ref: "1 Peter 5:7", verses: [
+      [7, "Casting all your care upon him; for he careth for you."]
+    ]},
+    { group: "Trust and peace", id: "isa41-10", ref: "Isaiah 41:10", verses: [
+      [10, "Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee; yea, I will help thee; yea, I will uphold thee with the right hand of my righteousness."]
+    ]},
+    { group: "Trust and peace", id: "josh1-9", ref: "Joshua 1:9", verses: [
+      [9, "Have not I commanded thee? Be strong and of a good courage; be not afraid, neither be thou dismayed: for the LORD thy God is with thee whithersoever thou goest."]
+    ]},
+    { group: "Trust and peace", id: "isa40-31", ref: "Isaiah 40:31", verses: [
+      [31, "But they that wait upon the LORD shall renew their strength; they shall mount up with wings as eagles; they shall run, and not be weary; and they shall walk, and not faint."]
+    ]},
+    { group: "Trust and peace", id: "ps23", ref: "Psalm 23", verses: [
+      [1, "The LORD is my shepherd; I shall not want."],
+      [2, "He maketh me to lie down in green pastures: he leadeth me beside the still waters."],
+      [3, "He restoreth my soul: he leadeth me in the paths of righteousness for his name’s sake."],
+      [4, "Yea, though I walk through the valley of the shadow of death, I will fear no evil: for thou art with me; thy rod and thy staff they comfort me."],
+      [5, "Thou preparest a table before me in the presence of mine enemies: thou anointest my head with oil; my cup runneth over."],
+      [6, "Surely goodness and mercy shall follow me all the days of my life: and I will dwell in the house of the LORD for ever."]
+    ]},
+    { group: "Trust and peace", id: "rom8-28", ref: "Romans 8:28", verses: [
+      [28, "And we know that all things work together for good to them that love God, to them who are the called according to his purpose."]
+    ]},
+    { group: "Strength and temptation", id: "phil4-13", ref: "Philippians 4:13", verses: [
+      [13, "I can do all things through Christ which strengtheneth me."]
+    ]},
+    { group: "Strength and temptation", id: "1cor10-13", ref: "1 Corinthians 10:13", verses: [
+      [13, "There hath no temptation taken you but such as is common to man: but God is faithful, who will not suffer you to be tempted above that ye are able; but will with the temptation also make a way to escape, that ye may be able to bear it."]
+    ]},
+    { group: "Strength and temptation", id: "eph6-10", ref: "Ephesians 6:10–18", verses: [
+      [10, "Finally, my brethren, be strong in the Lord, and in the power of his might."],
+      [11, "Put on the whole armour of God, that ye may be able to stand against the wiles of the devil."],
+      [12, "For we wrestle not against flesh and blood, but against principalities, against powers, against the rulers of the darkness of this world, against spiritual wickedness in high places."],
+      [13, "Wherefore take unto you the whole armour of God, that ye may be able to withstand in the evil day, and having done all, to stand."],
+      [14, "Stand therefore, having your loins girt about with truth, and having on the breastplate of righteousness;"],
+      [15, "And your feet shod with the preparation of the gospel of peace;"],
+      [16, "Above all, taking the shield of faith, wherewith ye shall be able to quench all the fiery darts of the wicked."],
+      [17, "And take the helmet of salvation, and the sword of the Spirit, which is the word of God:"],
+      [18, "Praying always with all prayer and supplication in the Spirit, and watching thereunto with all perseverance and supplication for all saints;"]
+    ]},
+    { group: "Love and fellowship", id: "col3-16", ref: "Colossians 3:16–17", verses: [
+      [16, "Let the word of Christ dwell in you richly in all wisdom; teaching and admonishing one another in psalms and hymns and spiritual songs, singing with grace in your hearts to the Lord."],
+      [17, "And whatsoever ye do in word or deed, do all in the name of the Lord Jesus, giving thanks to God and the Father by him."]
+    ]},
+    { group: "Love and fellowship", id: "1jn4-7", ref: "1 John 4:7–12", verses: [
+      [7, "Beloved, let us love one another: for love is of God; and every one that loveth is born of God, and knoweth God."],
+      [8, "He that loveth not knoweth not God; for God is love."],
+      [9, "In this was manifested the love of God toward us, because that God sent his only begotten Son into the world, that we might live through him."],
+      [10, "Herein is love, not that we loved God, but that he loved us, and sent his Son to be the propitiation for our sins."],
+      [11, "Beloved, if God so loved us, we ought also to love one another."],
+      [12, "No man hath seen God at any time. If we love one another, God dwelleth in us, and his love is perfected in us."]
+    ]},
+    { group: "Love and fellowship", id: "heb10-24", ref: "Hebrews 10:24–25", verses: [
+      [24, "And let us consider one another to provoke unto love and to good works:"],
+      [25, "Not forsaking the assembling of ourselves together, as the manner of some is; but exhorting one another: and so much the more, as ye see the day approaching."]
+    ]},
+    { group: "Witness", id: "matt5-16", ref: "Matthew 5:16", verses: [
+      [16, "Let your light so shine before men, that they may see your good works, and glorify your Father which is in heaven."]
+    ]},
+    { group: "Witness", id: "rom1-16", ref: "Romans 1:16", verses: [
+      [16, "For I am not ashamed of the gospel of Christ: for it is the power of God unto salvation to every one that believeth; to the Jew first, and also to the Greek."]
+    ]},
+    { group: "Witness", id: "1pet3-15", ref: "1 Peter 3:15", verses: [
+      [15, "But sanctify the Lord God in your hearts: and be ready always to give an answer to every man that asketh you a reason of the hope that is in you with meekness and fear:"]
+    ]},
+    { group: "Witness", id: "matt28-19", ref: "Matthew 28:19–20", verses: [
+      [19, "Go ye therefore, and teach all nations, baptizing them in the name of the Father, and of the Son, and of the Holy Ghost:"],
+      [20, "Teaching them to observe all things whatsoever I have commanded you: and, lo, I am with you alway, even unto the end of the world. Amen."]
+    ]}
+  ];
+
+  var MODES = [
+    { id: "read", label: "Read" },
+    { id: "fade", label: "Fade" },
+    { id: "letters", label: "First letters" },
+    { id: "type", label: "Type it" },
+    { id: "speak", label: "Recite" }
+  ];
+  var LEVELS = [
+    { v: 1, label: "Still shaky", days: 1 },
+    { v: 2, label: "Getting there", days: 3 },
+    { v: 3, label: "Solid", days: 7 }
+  ];
+
+  /* ---------- storage (always guarded) ---------- */
+  var mem = {};
+  function load() {
+    try { var s = localStorage.getItem("kjv-verses-v1"); if (s) return JSON.parse(s); } catch (e) {}
+    return mem.progress || {};
+  }
+  function save(p) {
+    mem.progress = p;
+    try { localStorage.setItem("kjv-verses-v1", JSON.stringify(p)); } catch (e) {}
+  }
+  var progress = load();
+  var themePref = null;
+  try { themePref = localStorage.getItem("kjv-verses-theme"); } catch (e) {}
+  if (themePref) document.documentElement.setAttribute("data-theme", themePref);
+
+  /* ---------- state ---------- */
+  var state = {
+    pid: PASSAGES[0].id, mode: "read", verse: null,
+    fade: 40, seed: 1, revealed: {}, typed: "", spoken: "", listening: false, speakMsg: "", result: null, showHints: false, justSaved: false
+  };
+  try { var lastP = localStorage.getItem("kjv-verses-last"); if (lastP && PASSAGES.some(function (p) { return p.id === lastP; })) state.pid = lastP; } catch (e) {}
+
+  function passage() { return PASSAGES.filter(function (p) { return p.id === state.pid; })[0]; }
+  function activeVerses() {
+    var p = passage();
+    return p.verses.filter(function (v) { return state.verse === null || v[0] === state.verse; });
+  }
+
+  /* ---------- helpers ---------- */
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function norm(w) { return w.toLowerCase().replace(/[^a-z0-9]/g, ""); }
+  function rng(seed) { var a = seed >>> 0; return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function wordsOf(verses) {
+    var out = [];
+    verses.forEach(function (v) { v[1].split(/\s+/).forEach(function (w) { out.push({ v: v[0], w: w }); }); });
+    return out;
+  }
+  function dayMs(n) { return n * 86400000; }
+  function startOfDay(t) { var d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  function dueInfo(id) {
+    var s = progress[id];
+    if (!s || !s.level) return { text: "Not started", due: false };
+    var lv = LEVELS.filter(function (l) { return l.v === s.level; })[0];
+    var next = startOfDay(s.last) + dayMs(lv.days);
+    var diff = Math.round((next - startOfDay(Date.now())) / 86400000);
+    if (diff <= 0) return { text: "Due today", due: true };
+    return { text: "Review in " + diff + (diff === 1 ? " day" : " days"), due: false };
+  }
+
+  /* ---------- render ---------- */
+  var elPassages = document.getElementById("passages");
+  var elPanel = document.getElementById("panel");
+
+  function renderPassages() {
+    var groups = [], seen = {};
+    PASSAGES.forEach(function (p) { if (!seen[p.group]) { seen[p.group] = { name: p.group, items: [] }; groups.push(seen[p.group]); } seen[p.group].items.push(p); });
+    var solidAll = 0, dueAll = 0;
+    var listHTML = groups.map(function (g) {
+      var solid = g.items.filter(function (p) { return (progress[p.id] || {}).level === 3; }).length;
+      var btns = g.items.map(function (p) {
+        var s = progress[p.id] || {};
+        var d = dueInfo(p.id);
+        var pips = [1, 2, 3].map(function (n) { return '<span class="pip' + ((s.level || 0) >= n ? " on" : "") + '"></span>'; }).join("");
+        return '<button class="p-btn" type="button" data-id="' + p.id + '" aria-current="' + (p.id === state.pid) + '">' +
+          '<span class="p-ref">' + p.ref + '</span>' +
+          '<span class="p-meta"><span class="pips" aria-hidden="true">' + pips + '</span><span class="' + (d.due ? "due" : "") + '">' + d.text + '</span></span></button>';
+      }).join("");
+      return '<div class="grp">' + g.name + '<span>' + solid + ' of ' + g.items.length + ' solid</span></div>' + btns;
+    }).join("");
+    elPassages.innerHTML = listHTML;
+    PASSAGES.forEach(function (p) { var s = progress[p.id] || {}; if (s.level === 3) solidAll++; if (dueInfo(p.id).due) dueAll++; });
+    var sel = document.getElementById("pSel");
+    sel.innerHTML = groups.map(function (g) {
+      return '<optgroup label="' + g.name + '">' + g.items.map(function (p) {
+        var d = dueInfo(p.id);
+        return '<option value="' + p.id + '"' + (p.id === state.pid ? " selected" : "") + '>' + p.ref + (d.due ? "  (due)" : "") + '</option>';
+      }).join("") + '</optgroup>';
+    }).join("");
+    var txt = solidAll + " of " + PASSAGES.length + " solid" + (dueAll ? " · " + dueAll + " due today" : "");
+    document.getElementById("statsMobile").textContent = txt;
+    document.getElementById("summary").textContent = " · " + txt;
+    var cur = elPassages.querySelector('[aria-current="true"]');
+    if (cur && cur.scrollIntoView && elPassages.offsetParent !== null) { try { cur.scrollIntoView({ block: "nearest" }); } catch (e) {} }
+  }
+
+  function scriptureHTML(verses, mode) {
+    var order = [];
+    var hiddenSet = {};
+    var all = wordsOf(verses);
+    if (mode === "fade") {
+      var r = rng(state.seed + state.pid.length * 97);
+      order = all.map(function (_, i) { return i; });
+      for (var i = order.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)); var t = order[i]; order[i] = order[j]; order[j] = t; }
+      var count = Math.round(order.length * state.fade / 100);
+      for (var k = 0; k < count; k++) hiddenSet[order[k]] = true;
+    }
+    var idx = 0;
+    return verses.map(function (v) {
+      var words = v[1].split(/\s+/).map(function (w) {
+        var i = idx++;
+        var key = "w" + i;
+        if (mode === "read") return esc(w);
+        if (mode === "fade") {
+          if (hiddenSet[i] && !state.revealed[key]) return '<button type="button" class="w hide" data-k="' + key + '" aria-label="Hidden word, tap to reveal">' + esc(w) + '</button>';
+          if (hiddenSet[i]) return '<button type="button" class="w show-again" data-k="' + key + '" data-hide="1">' + esc(w) + '</button>';
+          return esc(w);
+        }
+        if (mode === "letters") {
+          if (state.revealed[key]) return '<button type="button" class="w show-again" data-k="' + key + '" data-hide="1">' + esc(w) + '</button>';
+          var m = w.match(/^([^A-Za-z]*)([A-Za-z])([A-Za-z'’\-]*)([^A-Za-z]*)$/);
+          if (!m) return esc(w);
+          return '<button type="button" class="w initial" data-k="' + key + '" aria-label="Tap to reveal word">' + esc(m[1] + m[2]) + '<span aria-hidden="true">' + (m[3] ? "‥" : "") + '</span>' + esc(m[4]) + '</button>';
+        }
+        return esc(w);
+      }).join(" ");
+      return '<span class="vblock"><sup>' + v[0] + '</sup>' + words + '</span>';
+    }).join("");
+  }
+
+  function render() {
+    var p = passage();
+    var s = progress[p.id] || {};
+    var html = "";
+    html += '<h2>' + p.ref + '</h2>';
+    html += '<div class="modes" role="tablist" aria-label="Practice mode">' + MODES.map(function (m) {
+      return '<button class="mode" role="tab" type="button" data-mode="' + m.id + '" aria-selected="' + (m.id === state.mode) + '">' + m.label + '</button>';
+    }).join("") + '</div>';
+
+    if (p.verses.length > 1) html += '<div class="verse-pick" aria-label="Choose verses"><button class="chip" type="button" data-verse="all" aria-pressed="' + (state.verse === null) + '">Whole passage</button>' +
+      p.verses.map(function (v) { return '<button class="chip" type="button" data-verse="' + v[0] + '" aria-pressed="' + (state.verse === v[0]) + '">Verse ' + v[0] + '</button>'; }).join("") + '</div>';
+
+    var verses = activeVerses();
+
+    if (state.mode === "read") {
+      html += '<p class="hint">Read it slowly and aloud, twice. Then move on to Fade.</p>';
+      html += '<div class="scripture">' + scriptureHTML(verses, "read") + '</div>';
+    } else if (state.mode === "fade") {
+      html += '<p class="hint">Say the passage aloud and fill in each gap from memory. Tap a gap to check yourself. Raise the slider as it gets easier.</p>';
+      html += '<div class="controls"><label>Hidden words <input type="range" id="fadeRange" min="0" max="100" step="10" value="' + state.fade + '" aria-valuetext="' + state.fade + ' percent"><span id="fadeVal">' + state.fade + '%</span></label>' +
+        '<button class="btn" type="button" id="shuffle">Shuffle gaps</button><button class="btn" type="button" id="revealAll">Reset</button></div>';
+      html += '<div class="scripture" id="scripture">' + scriptureHTML(verses, "fade") + '</div>';
+    } else if (state.mode === "letters") {
+      html += '<p class="hint">Only the first letter of each word is shown. Recite it, and tap any word you’re unsure of.</p>';
+      html += '<div class="controls"><button class="btn" type="button" id="revealAll">Reset</button></div>';
+      html += '<div class="scripture" id="scripture">' + scriptureHTML(verses, "letters") + '</div>';
+    } else if (state.mode === "speak") {
+      if (!SR) {
+        html += '<p class="hint">Speech recognition isn’t available in this browser. Try Chrome, Edge or Safari, or use Type it instead.</p>';
+      } else {
+        html += '<p class="hint">Press Start and recite the ' + (state.verse === null ? "passage" : "verse") + ' aloud from memory. Press Stop when you’re done and I’ll compare what I heard to the KJV. Your browser may ask to use the microphone.</p>';
+        html += '<div class="mic-row"><button class="mic" type="button" id="micBtn" aria-pressed="' + state.listening + '"><span class="dot" aria-hidden="true"></span><span id="micLabel">' + (state.listening ? "Stop" : "Start reciting") + '</span></button><span class="speak-msg" id="speakMsg" role="status" aria-live="polite"></span></div>';
+        html += '<textarea id="spoken" aria-label="What was heard" placeholder="Your words will appear here as you speak." spellcheck="false" autocomplete="off" autocapitalize="off"' + (state.listening ? " readonly" : "") + '>' + esc(state.spoken) + '</textarea>';
+        html += '<div class="row"><button class="btn primary" type="button" id="checkSpeak">Check</button><button class="btn" type="button" id="clearSpeak">Clear</button></div><p class="note">If the Start button doesn’t work on your device, tap the box above and use the microphone key on your keyboard to dictate, then press Check.</p>';
+        html += '<div id="result"></div>';
+      }
+    } else {
+      html += '<p class="hint">Type the ' + (state.verse === null ? "passage" : "verse") + ' from memory. Capitals and punctuation don’t matter; spelling and word order do.</p>';
+      if (state.showHints) html += '<div class="hint-block" id="hintBlock">' + scriptureHTML(verses, "letters").replace(/<button[^>]*>/g, "<span>").replace(/<\/button>/g, "</span>") + '</div>';
+      html += '<textarea id="typed" aria-label="Type from memory" spellcheck="false" autocomplete="off" autocapitalize="off">' + esc(state.typed) + '</textarea>';
+      html += '<div class="row"><button class="btn primary" type="button" id="checkBtn">Check</button><button class="btn" type="button" id="clearBtn">Clear</button>' +
+        '<label class="check-label"><input type="checkbox" id="hintToggle"' + (state.showHints ? " checked" : "") + '> Show first letters</label></div>';
+      html += '<div id="result"></div>';
+    }
+
+    html += '<div class="rate"><p>How well do you know this passage?</p><div class="opts">' + LEVELS.map(function (l) {
+      return '<button class="opt" type="button" data-level="' + l.v + '" aria-pressed="' + (s.level === l.v) + '">' + l.label + '</button>';
+    }).join("") + (state.justSaved ? '<span class="saved" role="status">Saved</span>' : "") + '</div></div>';
+
+    if (s.best != null) html += '<p class="foot">Best recall score: ' + s.best + '%' + (s.last ? " · last practiced " + new Date(s.last).toLocaleDateString() : "") + '</p>';
+    else html += '<p class="foot">Your ratings and scores are saved in this browser.</p>';
+
+    var idxP = PASSAGES.indexOf(p);
+    html += '<div class="pager">' + (idxP > 0 ? '<button class="btn" type="button" data-nav="-1">Previous: ' + PASSAGES[idxP - 1].ref + '</button>' : '<span></span>') +
+      (idxP < PASSAGES.length - 1 ? '<button class="btn" type="button" data-nav="1">Next: ' + PASSAGES[idxP + 1].ref + '</button>' : '') + '</div>';
+    elPanel.innerHTML = html;
+    if (state.mode === "speak") setSpeakMsg(state.speakMsg, state.speakErr);
+    if (state.mode === "type" && state.result) renderResult();
+    renderPassages();
+  }
+
+  /* ---------- typing check ---------- */
+  function lev(a, b) {
+    var prev = [], cur = [], i, j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      cur = [i];
+      for (j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  function same(a, b, lenient) {
+    if (a === b) return true;
+    if (!lenient) return false;
+    var L = Math.max(a.length, b.length);
+    if (L < 5 || Math.abs(a.length - b.length) > 2) return false;
+    return lev(a, b) <= (L >= 9 ? 2 : 1);
+  }
+  function diff(refWords, typedWords, lenient) {
+    var n = refWords.length, m = typedWords.length;
+    var rn = refWords.map(function (w) { return norm(w.replace(/-/g, "")); });
+    var tn = typedWords.map(function (w) { return norm(w.replace(/-/g, "")); });
+    var dp = [];
+    for (var i = 0; i <= n; i++) { dp.push(new Array(m + 1).fill(0)); }
+    for (i = n - 1; i >= 0; i--) for (var j = m - 1; j >= 0; j--) {
+      dp[i][j] = same(rn[i], tn[j], lenient) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+    var ops = [], a = 0, b = 0, ok = 0, extra = 0;
+    while (a < n || b < m) {
+      if (a < n && b < m && same(rn[a], tn[b], lenient)) { ops.push({ t: "ok", w: refWords[a] }); ok++; a++; b++; }
+      else if (a < n && (b >= m || dp[a + 1][b] >= dp[a][b + 1])) { ops.push({ t: "miss", w: refWords[a] }); a++; }
+      else { ops.push({ t: "extra", w: typedWords[b] }); extra++; b++; }
+    }
+    return { ops: ops, ok: ok, extra: extra, total: n };
+  }
+
+  function checkTyped() { checkText(state.typed, false); }
+  function checkText(text, lenient) {
+    var verses = activeVerses();
+    var ref = wordsOf(verses).map(function (x) { return x.w; });
+    var typed = text.replace(/\d+/g, " ").split(/\s+/).filter(Boolean);
+    var d = diff(ref, typed, lenient);
+    d.lenient = lenient;
+    d.pct = typed.length ? Math.round(100 * d.ok / (d.total + d.extra)) : 0;
+    state.result = d;
+    var p = passage();
+    if (state.verse === null && typed.length) {
+      var s = progress[p.id] || {};
+      if (s.best == null || d.pct > s.best) s.best = d.pct;
+      s.last = Date.now();
+      progress[p.id] = s; save(progress);
+    }
+    renderResult();
+    renderPassages();
+  }
+
+  function renderResult() {
+    var d = state.result, box = document.getElementById("result");
+    if (!box || !d) return;
+    var msg = d.pct === 100 ? "Word perfect." : d.pct >= 90 ? "Nearly there." : d.pct >= 60 ? "Good progress." : "Keep at it.";
+    box.innerHTML = '<div class="result"><p class="score">' + d.pct + '%<small>' + msg + ' ' + d.ok + ' of ' + d.total + ' words correct.</small></p>' +
+      '<div class="diff">' + d.ops.map(function (o) { return '<span class="' + o.t + '">' + esc(o.w) + '</span>'; }).join(" ") + '</div>' +
+      '<p class="legend">Highlighted words were missed. Struck-through words were extra or ' + (d.lenient ? 'misheard.' : 'misspelled.') + '</p>' +
+      (d.lenient ? '<p class="note">Speech recognition can mishear old words like “hath” or “ye”. If a word was heard wrong, fix it in the text box above and check again. Close misspellings are accepted.</p>' : '') + '</div>';
+  }
+
+  /* ---------- events ---------- */
+  function selectPassage(id) {
+    stopListening(); state.spoken = ""; state.pid = id; state.verse = null; state.revealed = {}; state.typed = ""; state.result = null; state.justSaved = false; state.speakMsg = ""; state.speakErr = false;
+    try { localStorage.setItem("kjv-verses-last", state.pid); } catch (er) {}
+    render();
+    window.scrollTo(0, 0);
+  }
+  elPassages.addEventListener("click", function (e) {
+    var b = e.target.closest(".p-btn"); if (!b) return;
+    selectPassage(b.getAttribute("data-id"));
+  });
+  document.getElementById("pSel").addEventListener("change", function (e) { selectPassage(e.target.value); });
+
+  elPanel.addEventListener("click", function (e) {
+    var t = e.target;
+    var nav = t.closest("[data-nav]");
+    if (nav) { var ni = PASSAGES.indexOf(passage()) + parseInt(nav.getAttribute("data-nav"), 10); if (PASSAGES[ni]) selectPassage(PASSAGES[ni].id); return; }
+    var mode = t.closest("[data-mode]");
+    if (mode) { stopListening(); state.mode = mode.getAttribute("data-mode"); state.revealed = {}; state.result = null; state.justSaved = false; render(); return; }
+    var chip = t.closest("[data-verse]");
+    if (chip) { stopListening(); state.spoken = ""; var v = chip.getAttribute("data-verse"); state.verse = v === "all" ? null : parseInt(v, 10); state.revealed = {}; state.typed = ""; state.result = null; render(); return; }
+    var w = t.closest(".w");
+    if (w) { var k = w.getAttribute("data-k"); if (w.getAttribute("data-hide")) delete state.revealed[k]; else state.revealed[k] = true; refreshScripture(); return; }
+    if (t.id === "shuffle") { state.seed = Math.floor(Math.random() * 1e6); state.revealed = {}; refreshScripture(); return; }
+    if (t.id === "revealAll") { state.revealed = {}; refreshScripture(); return; }
+    if (t.id === "checkBtn") { state.typed = document.getElementById("typed").value; checkTyped(); return; }
+    var mic = t.closest("#micBtn");
+    if (mic) { if (state.listening) stopListening(); else startListening(); return; }
+    if (t.id === "checkSpeak") { stopListening(); var sp = document.getElementById("spoken"); if (sp) state.spoken = sp.value; checkText(state.spoken, true); return; }
+    if (t.id === "clearSpeak") { stopListening(); state.spoken = ""; state.result = null; render(); return; }
+    if (t.id === "clearBtn") { state.typed = ""; state.result = null; render(); return; }
+    var opt = t.closest("[data-level]");
+    if (opt) {
+      var id = state.pid, s = progress[id] || {};
+      s.level = parseInt(opt.getAttribute("data-level"), 10); s.last = Date.now();
+      progress[id] = s; save(progress); state.justSaved = true; render(); return;
+    }
+  });
+
+  elPanel.addEventListener("input", function (e) {
+    if (e.target.id === "typed") { state.typed = e.target.value; }
+    if (e.target.id === "spoken" && !state.listening) { state.spoken = e.target.value; }
+    if (e.target.id === "fadeRange") {
+      state.fade = parseInt(e.target.value, 10); state.revealed = {};
+      document.getElementById("fadeVal").textContent = state.fade + "%";
+      e.target.setAttribute("aria-valuetext", state.fade + " percent");
+      refreshScripture();
+    }
+  });
+  elPanel.addEventListener("change", function (e) {
+    if (e.target.id === "hintToggle") { state.typed = document.getElementById("typed").value; state.showHints = e.target.checked; render(); }
+  });
+
+  function refreshScripture() {
+    var box = document.getElementById("scripture");
+    if (box) box.innerHTML = scriptureHTML(activeVerses(), state.mode);
+  }
+
+  /* ---------- speech recognition ---------- */
+  var rec = null, wantListening = false, baseText = "", startedAt = 0, gotAny = false, quickEnds = 0;
+  var DICTATE_TIP = " Tap the box below and use the microphone key on your keyboard to dictate instead, then press Check.";
+  function failListening(msg) {
+    wantListening = false; state.listening = false; syncMic();
+    setSpeakMsg(msg + DICTATE_TIP, true);
+    var box = document.getElementById("spoken"); if (box) { box.value = state.spoken; try { box.focus(); } catch (er) {} }
+  }
+  function setSpeakMsg(msg, isErr) {
+    state.speakMsg = msg || ""; state.speakErr = !!isErr;
+    var el = document.getElementById("speakMsg");
+    if (el) { el.textContent = state.speakMsg; el.className = "speak-msg" + (isErr ? " err" : ""); }
+  }
+  function syncMic() {
+    var b = document.getElementById("micBtn"), l = document.getElementById("micLabel"), t = document.getElementById("spoken");
+    if (b) b.setAttribute("aria-pressed", String(state.listening));
+    if (l) l.textContent = state.listening ? "Stop" : "Start reciting";
+    if (t) t.readOnly = state.listening;
+  }
+  function startListening() {
+    if (!SR) return;
+    var t = document.getElementById("spoken");
+    baseText = t ? t.value.trim() : state.spoken.trim();
+    if (baseText) baseText += " ";
+    state.result = null; var rb = document.getElementById("result"); if (rb) rb.innerHTML = "";
+    startedAt = Date.now(); gotAny = false; quickEnds = 0;
+    try {
+      rec = new SR();
+      rec.lang = "en-US"; rec.continuous = true; rec.interimResults = true;
+      rec.onresult = function (e) {
+        var interim = "";
+        gotAny = true; quickEnds = 0;
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+          var tr = e.results[i][0].transcript;
+          if (e.results[i].isFinal) baseText += tr.trim() + " "; else interim += tr;
+        }
+        state.spoken = baseText.trim();
+        var box = document.getElementById("spoken");
+        if (box) { box.value = baseText + interim; box.scrollTop = box.scrollHeight; }
+      };
+      rec.onerror = function (e) {
+        if (e.error === "no-speech" || e.error === "aborted") return;
+        var msg = e.error === "not-allowed" || e.error === "service-not-allowed"
+          ? "This page isn’t being allowed to use the microphone (error: " + e.error + "). The page may be blocked from it even if Chrome has permission."
+          : e.error === "audio-capture" ? "No microphone was found (error: audio-capture)."
+          : e.error === "network" ? "Speech recognition needs an internet connection (error: network)."
+          : "Speech recognition stopped (error: " + e.error + ").";
+        failListening(msg);
+      };
+      rec.onend = function () {
+        if (wantListening) {
+          if (!gotAny && Date.now() - startedAt < 2000) quickEnds++;
+          if (quickEnds >= 2) { failListening("Listening kept stopping before hearing anything."); return; }
+          startedAt = Date.now();
+          try { rec.start(); return; } catch (er) {}
+        }
+        state.listening = false; wantListening = false; syncMic();
+        var box = document.getElementById("spoken"); if (box) box.value = state.spoken;
+        if (!state.speakErr) setSpeakMsg(state.spoken ? "Stopped. Press Check to compare." : "", false);
+      };
+      wantListening = true; state.listening = true;
+      setSpeakMsg("Listening…", false); syncMic();
+      rec.start();
+    } catch (er) {
+      wantListening = false; state.listening = false; syncMic();
+      failListening("Couldn’t start the microphone.");
+    }
+  }
+  function stopListening() {
+    wantListening = false;
+    if (rec && state.listening) { try { rec.stop(); } catch (er) {} }
+    state.listening = false; syncMic();
+  }
+
+  document.getElementById("themeBtn").addEventListener("click", function () {
+    var cur = document.documentElement.getAttribute("data-theme");
+    var isDark = cur ? cur === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = isDark ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("kjv-verses-theme", next); } catch (e) {}
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
