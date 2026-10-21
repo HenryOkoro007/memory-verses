@@ -1,8 +1,10 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- v8 -->
 <title>Hid in my heart — KJV memory verses</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -181,6 +183,9 @@ textarea {
 (function () {
   "use strict";
 
+  var APP_VERSION = "v8 (21 Oct 2026)";
+  var INSECURE = window.isSecureContext === false;
+  var FILE_MSG = "You’ve opened this page as a file on your device. Phones only allow the microphone on a web address that starts with https://. Open your hosted github.io link instead.";
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   var PASSAGES = [
@@ -530,6 +535,7 @@ textarea {
       if (!SR) {
         html += '<p class="hint">Speech recognition isn’t available in this browser. Try Chrome, Edge or Safari, or use Type it instead.</p>';
       } else {
+        if (INSECURE) html += '<p class="speak-msg err" style="margin:0 0 14px">' + FILE_MSG + '</p>';
         html += '<p class="hint">Press Start and recite the ' + (state.verse === null ? "passage" : "verse") + ' aloud from memory. Press Stop when you’re done and I’ll compare what I heard to the KJV. Your browser may ask to use the microphone.</p>';
         html += '<div class="mic-row"><button class="mic" type="button" id="micBtn" aria-pressed="' + state.listening + '"><span class="dot" aria-hidden="true"></span><span id="micLabel">' + (state.listening ? "Stop" : "Start reciting") + '</span></button><span class="speak-msg" id="speakMsg" role="status" aria-live="polite"></span></div>';
         html += '<textarea id="spoken" aria-label="What was heard" placeholder="Your words will appear here as you speak." spellcheck="false" autocomplete="off" autocapitalize="off"' + (state.listening ? " readonly" : "") + '>' + esc(state.spoken) + '</textarea>';
@@ -555,6 +561,7 @@ textarea {
     var idxP = PASSAGES.indexOf(p);
     html += '<div class="pager">' + (idxP > 0 ? '<button class="btn" type="button" data-nav="-1">Previous: ' + PASSAGES[idxP - 1].ref + '</button>' : '<span></span>') +
       (idxP < PASSAGES.length - 1 ? '<button class="btn" type="button" data-nav="1">Next: ' + PASSAGES[idxP + 1].ref + '</button>' : '') + '</div>';
+    html += '<p class="foot">App version: ' + APP_VERSION + '</p>';
     elPanel.innerHTML = html;
     if (state.mode === "speak") setSpeakMsg(state.speakMsg, state.speakErr);
     if ((state.mode === "type" || state.mode === "speak") && state.result) renderResult();
@@ -704,21 +711,39 @@ textarea {
 
   /* ---------- speech recognition ---------- */
   var rec = null, wantListening = false, baseText = "", sessionText = "", startedAt = 0, gotAny = false, quickEnds = 0;
-  // Android Chrome sends growing, repeated results ("1", "1 2", "1 2 3"), so rebuild the transcript from the
-  // whole results list each time and collapse results that merely extend the previous one.
+  // Android sends growing, repeated results ("1", "12", "123" ...), sometimes formatted differently each time.
+  // Rebuild the transcript from the whole results list and collapse repeats, comparing words
+  // without case, spaces or punctuation.
+  function skey(t) { return t.toLowerCase().replace(/[^a-z0-9]/g, ""); }
+  function overlapTrim(prev, t) {          // drop words at the start of t that repeat the end of prev (2+ words)
+    var lw = prev.split(/\s+/), tw = t.split(/\s+/), maxk = Math.min(lw.length, tw.length);
+    for (var k = maxk; k >= 2; k--) {
+      if (skey(lw.slice(-k).join(" ")) === skey(tw.slice(0, k).join(" "))) return tw.slice(k).join(" ");
+    }
+    return t;
+  }
   function buildFromResults(results) {
     var segs = [];
     for (var i = 0; i < results.length; i++) {
       var t = (results[i][0].transcript || "").trim();
       if (!t) continue;
       if (segs.length) {
-        var last = segs[segs.length - 1], lt = last.toLowerCase(), tt = t.toLowerCase();
-        if (tt.indexOf(lt) === 0) { segs[segs.length - 1] = t; continue; }
-        if (lt.indexOf(tt) === 0) continue;
+        var last = segs[segs.length - 1], kl = skey(last), kt = skey(t);
+        if (kl && kt && kt.indexOf(kl) === 0) { segs[segs.length - 1] = t; continue; }   // t extends last
+        if (kl && kt && kl.indexOf(kt) === 0) continue;                                  // t is part of last
+        t = overlapTrim(last, t);
+        if (!t) continue;
       }
       segs.push(t);
     }
     return segs.join(" ");
+  }
+  function joinText(base, add) {
+    base = base.trim(); add = add.trim();
+    if (!base) return add;
+    if (!add) return base;
+    add = overlapTrim(base, add);
+    return add ? base + " " + add : base;
   }
   var DICTATE_TIP = " Tap the box below and use the microphone key on your keyboard to dictate instead, then press Check.";
   function failListening(msg) {
@@ -752,14 +777,14 @@ textarea {
         if (my !== rec) return;
         gotAny = true; quickEnds = 0;
         sessionText = buildFromResults(e.results);
-        state.spoken = (baseText + sessionText).trim();
+        state.spoken = joinText(baseText, sessionText);
         var box = document.getElementById("spoken");
         if (box) { box.value = state.spoken; box.scrollTop = box.scrollHeight; }
       };
       rec.onerror = function (e) {
         if (my !== rec) return;
         if (e.error === "no-speech" || e.error === "aborted") return;
-        var msg = e.error === "not-allowed" || e.error === "service-not-allowed"
+        var msg = INSECURE ? FILE_MSG : e.error === "not-allowed" || e.error === "service-not-allowed"
           ? "This page isn’t being allowed to use the microphone (error: " + e.error + "). The page may be blocked from it even if Chrome has permission."
           : e.error === "audio-capture" ? "No microphone was found (error: audio-capture)."
           : e.error === "network" ? "Speech recognition needs an internet connection (error: network)."
@@ -772,7 +797,7 @@ textarea {
           if (!gotAny && Date.now() - startedAt < 2000) quickEnds++;
           if (quickEnds >= 2) { failListening("Listening kept stopping before hearing anything."); return; }
           startedAt = Date.now();
-          var joined = (baseText + sessionText).trim(); baseText = joined ? joined + " " : ""; sessionText = "";
+          var joined = joinText(baseText, sessionText); baseText = joined ? joined + " " : ""; sessionText = "";
           try { rec.start(); return; } catch (er) {}
         }
         state.listening = false; wantListening = false; syncMic();
@@ -806,3 +831,5 @@ textarea {
 </script>
 </body>
 </html>
+
+</body></html>
